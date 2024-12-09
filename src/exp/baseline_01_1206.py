@@ -2,8 +2,9 @@
 ## チュートリアル！
 # =================================================
 # ベースライン作成：
-
-
+# chainerではなくtensorflowを使用
+# 畳み込み層2つ、後半が全結合層2つ
+# Sequential APIでまずは行う。
 # %%
 # ライブラリ読み込み
 # =================================================
@@ -15,6 +16,7 @@ import logging
 
 # import re
 import os
+from skimage import io, exposure
 import sys
 import pickle
 from IPython.display import display
@@ -40,7 +42,28 @@ import lightgbm as lgb
 
 from sklearn.model_selection import StratifiedKFold, train_test_split  # , KFold
 # from sklearn.metrics import mean_squared_error,accuracy_score, roc_auc_score ,confusion_matrix
+#%%
+# import keras
+# from keras import layers
 
+import tensorflow as tf
+
+import tensorflow.python.keras.backend as K
+from tensorflow.keras.models import Sequential, Model  # type:ignore
+
+from tensorflow.keras.layers import Input, Dense, Dropout, BatchNormalization  # type:ignore
+
+from tensorflow.keras.layers import Flatten,Conv2D,MaxPooling2D   # type:ignore
+from tensorflow.keras.callbacks import (
+    EarlyStopping,
+    ModelCheckpoint,
+    ReduceLROnPlateau,
+    LearningRateScheduler,
+)  # type:ignore
+from tensorflow.keras.optimizers import Adam, SGD  # type:ignore
+
+#%%
+from tqdm import tqdm_notebook as tqdm
 
 # %%
 # Config
@@ -54,8 +77,8 @@ serial_number = 0  # スプレッドシートAの番号
 ######################
 # Data #
 ######################
-comp_name = "JR_Snowman"
-# 評価：weighted mean absolute error（WMAE:重み付き平均絶対誤差） 回帰
+comp_name = "Satellite"
+# 評価：IOU 回帰 分類
 
 skip_run = False  # 飛ばす->True，飛ばさない->False
 
@@ -246,487 +269,194 @@ logger = logging.getLogger()
 # %% ファイルの読み込み
 # Load Data
 # =================================================
-# 8 train.csv
-# train = load_data(8)
-train = pd.read_csv("../input/JR_Snowman/train.csv", encoding="shift-jis")
-
-# %%
-display(train.shape)
-display(train.info())
-display(train.head())
-display(train.describe().T)
-
-# %%
-# out_of_service.csv
-oos = pd.read_csv("../input/JR_Snowman/out_of_service.csv", encoding="shift-jis")
-# %%
-display(oos.shape)
-display(oos.info())
-display(oos.head())
-display(oos.describe().T)
-
-# %%
-# sample_submit.csv
-sample_sub = pd.read_csv("../input/JR_Snowman/sample_submit.csv", encoding="shift-jis")
-
-display(sample_sub.shape)
-display(sample_sub.info())
-display(sample_sub.head())
-display(sample_sub.describe().T)
-
-
-# %%
-# test.csv
-test = pd.read_csv("../input/JR_Snowman/test.csv", encoding="shift-jis")
-
-display(test.shape)
-display(test.info())
-display(test.head())
-display(test.describe().T)
-
-# %%
-# stop_station_location.csv
-stop_loc = pd.read_csv(
-    "../input/JR_Snowman/stop_station_location.csv", encoding="shift-jis"
-)
-
-display(stop_loc.shape)
-display(stop_loc.info())
-display(stop_loc.head())
-display(stop_loc.describe().T)
-
-
-# %%
-# tunnel_location.csv
-tunnel_loc = pd.read_csv(
-    "../input/JR_Snowman/tunnel_location.csv", encoding="shift-jis"
-)
-
-display(tunnel_loc.shape)
-display(tunnel_loc.info())
-display(tunnel_loc.head())
-display(tunnel_loc.describe().T)
-
-
-# %%
-# wind_location.csv
-wind_loc = pd.read_csv("../input/JR_Snowman/wind_location.csv", encoding="shift-jis")
-
-display(wind_loc.shape)
-display(wind_loc.info())
-display(wind_loc.head())
-display(wind_loc.describe().T)
-# %%
-# snowfall_location.csv
-snow_loc = pd.read_csv(
-    "../input/JR_Snowman/snowfall_location.csv", encoding="shift-jis"
-)
-
-display(snow_loc.shape)
-display(snow_loc.info())
-display(snow_loc.head())
-display(snow_loc.describe().T)
-# %%
-# diagram.csv
-diagram = pd.read_csv("../input/JR_Snowman/diagram.csv", encoding="shift-jis")
-
-display(diagram.shape)
-display(diagram.info())
-display(diagram.head())
-
-# %%
-# kanazawa_nosnow.csv
-k_nosnow = pd.read_csv("../input/JR_Snowman/kanazawa_nosnow.csv", encoding="shift-jis")
-
-display(k_nosnow.shape)
-display(k_nosnow.info())
-display(k_nosnow.head())
-display(k_nosnow.describe().T)
-# %%
-# 気象庁データ（weather.csv）
-weather = pd.read_csv("../input/JR_Snowman/weather.csv", encoding="cp932")
-
-display(weather.shape)
-display(weather.info())
-display(weather.head())
-display(weather.describe().T)
-# %%
-# ■積雪深計データ（snowfall.csv）
-snowfall = pd.read_csv("../input/JR_Snowman/snowfall.csv", encoding="cp932")
-
-display(snowfall.shape)
-display(snowfall.info())
-display(snowfall.head())
-display(snowfall.describe().T)
-
-# %%
-# ■風速計データ 下条川.csv
-wind_01 = pd.read_csv("../input/JR_Snowman/wind_0\下条川.csv", encoding="cp932")
-
-display(wind_01.shape)
-display(wind_01.info())
-display(wind_01.head())
-# display(wind_01.describe().T)
-
-
-# %%
-# データセット作成
-# =================================================
-train.columns
-# %%
-train.head()
-
-# %%
-train["年月日"] = pd.to_datetime(train["年月日"], format="%Y-%m-%d")
-
-# %%
-train["month"] = train["年月日"].astype(str).apply(lambda x: x[5:7])
-# %%
-train["day"] = train["年月日"].astype(str).apply(lambda x: x[8:])
-# %%
-train["yearmonth"] = train["年月日"].astype(str).apply(lambda x: x[:7])
-
-# %%
-
-# %%
-snow_man = train[train["合計"] > 0]
-
-# %%
-snow_man["month"].value_counts()
-
-# %%
-len(train[train["合計"] == 0]) / train.shape[0]
-# %%
-train.groupby("month")["合計"].describe()
-
-# %%
-sns.barplot(train.groupby("month")["合計"].mean())
-
-
-# %%
-# カテゴリ変数
-data_pre00(train)
-
-
-
-# %%
-# 学習データと検証データの期間の設定
-list_cv_month = [
-    [["2016-01", "2016-02"], ["2016-03"]],
-    [["2016-01", "2016-02", "2016-03"], ["2016-12"]],
-]
-# %%
-# データセット
-
-x_train = train[[
-    # '年月日', 
-    '列車番号',
-    # '停車駅名', 
-    # 'フェンダー部分(東京方向)', 
-    # '台車部分', 
-    # 'フェンダー部分(金沢方向)', 
-    # '合計',
-    'month', 'day', 
-    # 'yearmonth'
-    ]]
-y_train = train["合計"]
-
-id_train = train[["yearmonth"]]
-
-# %%
-# WMAE
-
-
-# WMAEの計算関数
-def wmae(y_true, y_pred, weights):
-    error = np.abs(y_true - y_pred)
-    return np.sum(weights * error) / len(y_true)
-
-
-# LightGBM用のカスタム評価関数
-def wmae_sklearn(y_true, y_pred):
-    weights = np.abs(y_true) * 10**4 + 1 
-    error = np.abs(y_true - y_pred)
-    wmae = np.sum(weights * error) / len(y_true)
-    return "wmae", wmae, False  # Falseは「小さいほど良い」を意味
-
-
-# lgbm初期値
-params = {
-    "boosting_type": "gbdt",
-    "objective": "regression",
-    "metric": "None",
-    "learning_rate": 0.05,
-    "num_leaves": 32,
-    "n_estimators": 10000,
-    "random_state": 123,
-    "importance_type": "gain",
-}
-
-
-# %%
-# 学習関数の定義
-# =================================================
-def train_lgb(
-    input_x,
-    input_y,
-    input_id,
-    params,
-    list_nfold=[0, 1],
-):
-    metrics = []
-    imp = pd.DataFrame()
-    # train_oof = np.zeros(len(input_x))
-    # shap_v = pd.DataFrame()
-    # 重みの計算
-    weights = np.abs(y_train) * 10**4 + 1
-
-    # cross-validation
-    # validation
-    cv = []
-    for month_tr, month_va in list_cv_month:
-        cv.append(
-            [
-                input_id.index[input_id["yearmonth"].isin(month_tr)],
-                input_id.index[input_id["yearmonth"].isin(month_va)],
-            ]
-        )
-
-    # 1.学習データと検証データに分離
-    for nfold in list_nfold:
-        print("-" * 20, nfold, "-" * 20)
-        print(dt_now().strftime("%Y年%m月%d日 %H:%M:%S"))
-
-        idx_tr, idx_va = cv[nfold][0], cv[nfold][1]
-
-        x_tr, y_tr = (
-            input_x.loc[idx_tr, :],
-            input_y[idx_tr],
-        )
-        x_va, y_va = (
-            input_x.loc[idx_va, :],
-            input_y[idx_va],
-        )
-
-        print(x_tr.shape, x_va.shape)
-
-        # モデルの保存先名
-        fname_lgb = os.path.join(EXP_MODEL, f"model_lgb_fold{nfold}.pickle")
-
-        if not os.path.isfile(fname_lgb):  # if trained model, no training
-            # train
-            print("-------training start-------")
-            model = lgb.LGBMRegressor(**params)
-            model.fit(
-                x_tr,
-                y_tr,
-                eval_metric=wmae_sklearn,  # カスタム評価関数を指定
-                eval_set=[(x_tr, y_tr), (x_va, y_va)],
-                callbacks=[
-                    lgb.early_stopping(stopping_rounds=100, verbose=True),
-                    lgb.log_evaluation(100),
-                ],
-            )
-
-            # モデルの保存
-            with open(fname_lgb, "wb") as f:
-                pickle.dump(model, f, protocol=4)
-
-        else:
-            print("すでに学習済みのためモデルを読み込みます")
-            with open(fname_lgb, "rb") as f:
-                model = pickle.load(f)
-
-        # evaluate
-        y_tr_pred = model.predict(x_tr)
-        y_va_pred = model.predict(x_va)
-
-        metric_tr = wmae(y_tr, y_tr_pred, weights)
-        metric_va = wmae(y_va, y_va_pred, weights)
-        metrics.append([nfold, metric_tr, metric_va])
-        print(f"[rmse] tr:{metric_tr:.4f}, va:{metric_va:.4f}")
-
-        # oof
-        # train_oof[idx_va] = y_va_pred
-
-        # shap_v  & 各特徴量のSHAP値の平均絶対値で重要度を算出
-        # explainer = shap.TreeExplainer(model)
-        # shap_values = explainer.shap_values(input_x)
-
-        # _shap_importance = np.abs(shap_values).mean(axis=0)
-        # _shap = pd.DataFrame(
-        #     {"col": input_x.columns, "shap": _shap_importance, "nfold": nfold}
-        # )
-        # shap_v = pd.concat([shap_v, _shap])
-
-        # imp
-        _imp = pd.DataFrame(
-            {"col": input_x.columns, "imp": model.feature_importances_, "nfold": nfold}
-        )
-        imp = pd.concat([imp, _imp])
-
-    print("-" * 20, "result", "-" * 20)
-
-    # metric
-    metrics = np.array(metrics)
-    print(metrics)
-    print(f"[cv] tr:{metrics[:,1].mean():.4f}+-{metrics[:,1].std():.4f}, \
-        va:{metrics[:,2].mean():.4f}+-{metrics[:,2].std():.4f}")
-
-    # print(f"[oof]{mean_squared_error(input_y, train_oof):.4f}")
-
-    # oof
-    # train_oof = pd.concat(
-    #     [
-    #         input_id,
-    #         pd.DataFrame({"pred": train_oof}),
-    #     ],
-    #     axis=1,
-    # )
-
-    # importance
-    imp = imp.groupby("col")["imp"].agg(["mean", "std"]).reset_index(drop=False)
-    imp.columns = ["col", "imp", "imp_std"]
-
-    # shap値
-    # shap_v = shap_v.groupby("col")["shap"].agg(["mean", "std"]).reset_index(drop=False)
-    # shap_v.columns = ["col", "shap", "shap_std"]
-
-    # stdout と stderr を一時的にリダイレクト
-    stdout_logger = logging.getLogger("STDOUT")
-    stderr_logger = logging.getLogger("STDERR")
-
-    sys_stdout_backup = sys.stdout
-    sys_stderr_backup = sys.stderr
-
-    sys.stdout = StreamToLogger(stdout_logger, logging.INFO)
-    sys.stderr = StreamToLogger(stderr_logger, logging.ERROR)
-    print("-" * 20, "result", "-" * 20)
-    print(dt_now().strftime("%Y年%m月%d日 %H:%M:%S"))
-    print(name)
-    print(x_tr.shape, x_va.shape)
-    print(metrics)
-    print(f"[cv] tr:{metrics[:,1].mean():.4f}+-{metrics[:,1].std():.4f}, \
-        va:{metrics[:,2].mean():.4f}+-{metrics[:,1].std():.4f}")
-
-    print("-" * 20, "importance", "-" * 20)
-    print(imp.sort_values("imp", ascending=False)[:10])
-
-    # リダイレクトを解除
-    sys.stdout = sys_stdout_backup
-    sys.stderr = sys_stderr_backup
-
-    return imp, metrics  # , shap_v
-
-
-# %%
-# train #, shap_v
-
-imp, metrics = train_lgb(
-    x_train,
-    y_train,
-    id_train,
-    params,
-    list_nfold=[0, 1],
-)
+#  train_1
+image_path = "../input/Satellite/train_1/train/train_1.tif"
+image = io.imread(image_path)
+
+print(image.shape)
 
 #%%
-# 説明変数の重要度の確認
-imp.groupby(['col'])['imp'].agg(['mean','std']).sort_values('mean',ascending=False)[:10]
+#画像データの確認、可視化
+fig,(ax0,ax1,ax2,ax3,ax4,ax5,ax6) = plt.subplots(nrows=1,ncols=7,figsize=(10,3))
+ax0.imshow(image[:,:,0])
+ax0.set_title("1")
+ax0.axis("off")
+ax0.set_adjustable("box")
+
+ax1.imshow(image[:,:,1])
+ax1.set_title("B")
+ax1.axis("off")
+ax1.set_adjustable("box")
+
+ax2.imshow(image[:,:,2])
+ax2.set_title("G")
+ax2.axis("off")
+ax2.set_adjustable("box")
+
+ax3.imshow(image[:,:,3])
+ax3.set_title("R")
+ax3.axis("off")
+ax3.set_adjustable("box")
+
+ax4.imshow(image[:,:,4])
+ax4.set_title("5")
+ax4.axis("off")
+ax4.set_adjustable("box")
+
+ax5.imshow(image[:,:,5])
+ax5.set_title("6")
+ax5.axis("off")
+ax5.set_adjustable("box")
+
+ax6.imshow(image[:,:,6])
+ax6.set_title("7")
+ax6.axis("off")
+ax6.set_adjustable("box")
+
+fig.tight_layout()
+
+#%%
+data = pd.read_csv(INPUT_PATH+"train_master.tsv",sep="\t")
+data.head()
+
+#%%
+# 3.画像データの前処理 正規化
+image_rescaled = exposure.rescale_intensity(image)
+#%%
+#前処理を行う前
+print("最大値：",image.max())
+print("最大値：",image.min())
+
+# %%
+#前処理を行った後
+print("最大値：",image_rescaled.max())
+print("最大値：",image_rescaled.min())
 
 
 #%%
-# 推論処理
-# =================================================
+# モデリング
+model = Sequential()
+
+model.add(Conv2D(32,(3,3),strides=2,activation="relu",input_shape=(32,32,7)))
+model.add(MaxPooling2D((2,2),strides=2))
+model.add(Dropout(0.2))
+model.add(Conv2D(32,(3,3),strides=2,activation="relu"))
+model.add(MaxPooling2D((2,2),strides=2))
+model.add(Dropout(0.2))
+model.add(Flatten())
+model.add(Dense(512, activation="relu"))
+model.add(Dropout(0.2))
+model.add(Dense(256, activation="relu"))
+model.add(Dense(2,activation="softmax"))
+model.summary()
 #%%
-test.head()
+
+
+tqdm.monitor_interval = 0
+#%%
+def preprocess(image, mode = 'train'):
+    """
+    image: shape = (h, w, channel)を想定。
+    mode: 'train', 'val', 'test'を想定。
+    """
+    if mode == 'train':
+        # その他いろいろな前処理メソッドを実装してみてください
+        if image.max()!=image.min():
+            image = exposure.rescale_intensity(image)
+
+    elif mode == 'val':
+        # その他いろいろな前処理メソッドを実装してみてください
+        if image.max()!=image.min():
+            image = exposure.rescale_intensity(image)
+
+    elif mode == 'test':
+        # その他いろいろな前処理メソッドを実装してみてください
+        if image.max()!=image.min():
+            image = exposure.rescale_intensity(image)
+    else:
+        # その他いろいろな前処理メソッドを実装してみてください
+        if image.max()!=image.min():
+            image = exposure.rescale_intensity(image)
+        
+    return image
+#%%
+def generate_minibatch(data_path, minibatch_meta, mode = 'train'):
+    images = []
+    if mode == 'train' or mode=='val':
+        labels = []
+    for data in minibatch_meta.iterrows():
+        im_path = os.path.join(data_path, data[1]['file_name'])
+        image = io.imread(im_path)
+
+        # preprocess image
+        image = preprocess(image, mode = mode)
+        image = image.transpose((2,0,1))
+        
+        if mode == 'train' or mode=='val':
+            labels.append(data[1]['flag'])
+
+        images.append(image)
+
+    images = np.array(images)
+    if mode == 'train' or mode=='val':
+        labels = np.array(labels)
+        
+        return images, labels
+    else:
+        return images
+    
+#%%
+def split_data(data, ratio=0.95):
+    train_index = np.random.choice(data.index, int(len(data)*ratio), replace=False)
+    val_index = list(set(data.index).difference(set(train_index)))
+    train = data.iloc[train_index].copy()
+    val = data.iloc[val_index].copy()
+
+    return train, val
 
 #%%
+def IOU(y_true, y_pred):
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    p_true_index = np.where(y_true==1)[0]
+    p_pred_index = np.where(y_pred==1)[0]
+    union = set(p_true_index).union(set(p_pred_index))
+    intersection = set(p_true_index).intersection(set(p_pred_index))
+    if len(union)==0:
+        return 0
+    else:
+        return len(intersection)/len(union)
+
+#%%
+
+
+
+#%%
+model.compile(optimizer="adam",
+              loss="softmax cross entropy",
+              metrics=["accuracy"])
+
+history = model.fit(x_train,y_train,epochs=20,
+                    validation_data=(x_test,y_test))
+test_loss,test_acc = model.evaluate(x_test,y_test)
+print(f"テストの正解率{test_acc:.2%}")
+
 # %%
-test["年月日"] = pd.to_datetime(test["年月日"], format="%Y-%m-%d")
+# 学習用画像が格納されているディレクトリを指定する
+data_path = "../input/Satellite/train_1/train"
 
+# 学習用データを学習用と検証用に改めて分割する
+train, val = split_data(data, ratio = 0.95)
 
-test["month"] = test["年月日"].astype(str).apply(lambda x: x[5:7])
+print('-'*20, 'train', '-'*20)
+print('number of samples:', len(train))
+print('number of positives:', train['flag'].sum())
+print('nubmer of negatives:', (1- train['flag']).sum())
+print('-'*47)
 
-test["day"] = test["年月日"].astype(str).apply(lambda x: x[8:])
-
-test["yearmonth"] = test["年月日"].astype(str).apply(lambda x: x[:7])
-
-#%%
-# カテゴリ変数
-data_pre00(test)
-
-#%%
-# データセット
-
-x_test = test[[
-    # '年月日', 
-    '列車番号',
-    # '停車駅名', 
-    # 'フェンダー部分(東京方向)', 
-    # '台車部分', 
-    # 'フェンダー部分(金沢方向)', 
-    # '合計',
-    'month', 'day', 
-    # 'yearmonth'
-    ]]
-#%%
-id_test = test[["Unnamed: 0","yearmonth"]]
-#%%
-id_test = id_test.rename(columns={"Unnamed: 0":"id"})
-#%%
-id_test.head()
-# %%
-# 推論関数の定義 =================================================
-def predict_lgb(
-    input_x,
-    input_id,
-    list_nfold=[0, 1],
-):
-    pred = np.zeros((len(input_x), len(list_nfold)))
-
-    for nfold in list_nfold:
-        print("-" * 20, nfold, "-" * 20)
-
-        fname_lgb = os.path.join(EXP_MODEL, f"model_lgb_fold{nfold}.pickle")
-        with open(fname_lgb, "rb") as f:
-            model = pickle.load(f)
-
-        # 推論
-        pred[:, nfold] = model.predict(input_x)
-
-    # 平均値算出
-    pred = pd.concat(
-        [
-            input_id["id"],
-            pd.DataFrame(pred.mean(axis=1)),
-        ],
-        axis=1,
-    )
-    print("Done.")
-
-    return pred
-
-
-# %%
-# 推論処理
-# =================================================
-
-test_pred = predict_lgb(x_test,id_test)
-#%%
-test_pred.head()
-#%%
-
-# %%
-# %%
-# submitファイルの出力
-# =================================================
-
-
-# %%
-test_pred.to_csv(
-    os.path.join(OUTPUT_EXP, f"submission_{name}.csv"), index=False, header=False
-)
-
-
+print('-'*20, 'val', '-'*20)
+print('number of samples:', len(val))
+print('number of positives:', val['flag'].sum())
+print('nubmer of negatives:', (1- val['flag']).sum())
+print('-'*45)
 # %%
