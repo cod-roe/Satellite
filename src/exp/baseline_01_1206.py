@@ -444,7 +444,9 @@ print(len(labels))
 x_tr, x_va, y_tr, y_va = train_test_split(
     images, labels, test_size=0.1, random_state=123
 )
-
+#%%
+x_train = np.transpose(x_tr, (0, 2, 3, 1))
+x_test = np.transpose(x_va, (0, 2, 3, 1))
 
 # %%
 # 今回の評価関数となっているIOU(intersection over union)を実装します。正解データy_trueと予測されたデータy_predを渡してIOUを返します。
