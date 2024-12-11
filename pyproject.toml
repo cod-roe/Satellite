@@ -158,4 +158,5 @@ dependencies = [
     "wrapt==1.17.0",
     "tensorflow==2.18.0",
     "scikit-image>=0.24.0",
+    "rasterio>=1.4.3",
 ]

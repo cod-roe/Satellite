@@ -21,7 +21,7 @@ import sys
 import pickle
 from IPython.display import display
 import warnings
-# import zipfile
+import zipfile
 
 import numpy as np
 import pandas as pd
@@ -42,7 +42,7 @@ import lightgbm as lgb
 
 from sklearn.model_selection import StratifiedKFold, train_test_split  # , KFold
 # from sklearn.metrics import mean_squared_error,accuracy_score, roc_auc_score ,confusion_matrix
-#%%
+# %%
 # import keras
 # from keras import layers
 
@@ -53,7 +53,7 @@ from tensorflow.keras.models import Sequential, Model  # type:ignore
 
 from tensorflow.keras.layers import Input, Dense, Dropout, BatchNormalization  # type:ignore
 
-from tensorflow.keras.layers import Flatten,Conv2D,MaxPooling2D   # type:ignore
+from tensorflow.keras.layers import Flatten, Conv2D, MaxPooling2D  # type:ignore
 from tensorflow.keras.callbacks import (
     EarlyStopping,
     ModelCheckpoint,
@@ -62,9 +62,9 @@ from tensorflow.keras.callbacks import (
 )  # type:ignore
 from tensorflow.keras.optimizers import Adam, SGD  # type:ignore
 
-#%%
+# %%
 from tqdm import tqdm_notebook as tqdm
-
+# import rasterio
 # %%
 # Config
 # =================================================
@@ -266,6 +266,30 @@ logger = logging.getLogger()
 # pd.set_option('display.max_columns',None)
 
 
+# %%
+# zipファイルの扱い
+# zip_file_path = "<zipファイルのパス>"
+# target_file_path = "<zipファイルの中にある目的のtxtファイル>"
+
+# with zipfile.ZipFile(file_path, "r") as zip_ref:
+#     with zip_ref.open(target_file_path, "r") as file:
+#         for line in file:
+#             line_decoded = line.decode("utf-8")
+#             # line_decodedに対してやりたいことを追記する
+
+
+# import zipfile
+
+# # zipファイルを読み込む
+# zip_f = zipfile.ZipFile('sample.zip')
+
+# # zipファイルの中身を取得
+# lst = zip_f.namelist()
+
+# # 取得したzipファイルの中身を出力
+# print(lst)
+
+
 # %% ファイルの読み込み
 # Load Data
 # =================================================
@@ -275,188 +299,277 @@ image = io.imread(image_path)
 
 print(image.shape)
 
-#%%
-#画像データの確認、可視化
-fig,(ax0,ax1,ax2,ax3,ax4,ax5,ax6) = plt.subplots(nrows=1,ncols=7,figsize=(10,3))
-ax0.imshow(image[:,:,0])
+# %%
+# 画像データの確認、可視化
+fig, (ax0, ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(
+    nrows=1, ncols=7, figsize=(10, 3)
+)
+ax0.imshow(image[:, :, 0])
 ax0.set_title("1")
 ax0.axis("off")
 ax0.set_adjustable("box")
 
-ax1.imshow(image[:,:,1])
+ax1.imshow(image[:, :, 1])
 ax1.set_title("B")
 ax1.axis("off")
 ax1.set_adjustable("box")
 
-ax2.imshow(image[:,:,2])
+ax2.imshow(image[:, :, 2])
 ax2.set_title("G")
 ax2.axis("off")
 ax2.set_adjustable("box")
 
-ax3.imshow(image[:,:,3])
+ax3.imshow(image[:, :, 3])
 ax3.set_title("R")
 ax3.axis("off")
 ax3.set_adjustable("box")
 
-ax4.imshow(image[:,:,4])
+ax4.imshow(image[:, :, 4])
 ax4.set_title("5")
 ax4.axis("off")
 ax4.set_adjustable("box")
 
-ax5.imshow(image[:,:,5])
+ax5.imshow(image[:, :, 5])
 ax5.set_title("6")
 ax5.axis("off")
 ax5.set_adjustable("box")
 
-ax6.imshow(image[:,:,6])
+ax6.imshow(image[:, :, 6])
 ax6.set_title("7")
 ax6.axis("off")
 ax6.set_adjustable("box")
 
 fig.tight_layout()
 
-#%%
-data = pd.read_csv(INPUT_PATH+"train_master.tsv",sep="\t")
-data.head()
-
-#%%
-# 3.画像データの前処理 正規化
-image_rescaled = exposure.rescale_intensity(image)
-#%%
-#前処理を行う前
-print("最大値：",image.max())
-print("最大値：",image.min())
+# %%
+data_df = pd.read_csv(INPUT_PATH + "train_master.tsv", sep="\t")
+data_df.head()
 
 # %%
-#前処理を行った後
-print("最大値：",image_rescaled.max())
-print("最大値：",image_rescaled.min())
+# 3.画像データの前処理 正規化
+image_rescaled = exposure.rescale_intensity(image)
+# %%
+# 前処理を行う前
+print("最大値：", image.max())
+print("最大値：", image.min())
+
+# %%
+# 前処理を行った後
+print("最大値：", image_rescaled.max())
+print("最大値：", image_rescaled.min())
 
 
-#%%
+# %%
+# 1枚の画像データを渡して画像処理後のデータを出力する
+def preprocess(image, mode="train"):
+    """
+    image: shape = (h, w, channel)を想定。
+    mode: 'train', 'val', 'test'を想定。
+    """
+    if mode == "train":
+        # その他いろいろな前処理メソッドを実装してみてください
+        if image.max() != image.min():
+            image = exposure.rescale_intensity(image)
+
+    elif mode == "val":
+        # その他いろいろな前処理メソッドを実装してみてください
+        if image.max() != image.min():
+            image = exposure.rescale_intensity(image)
+
+    elif mode == "test":
+        # その他いろいろな前処理メソッドを実装してみてください
+        if image.max() != image.min():
+            image = exposure.rescale_intensity(image)
+    else:
+        # その他いろいろな前処理メソッドを実装してみてください
+        if image.max() != image.min():
+            image = exposure.rescale_intensity(image)
+
+    return image
+
+
+# %%
+data_path = "../input/Satellite/train_a"
+
+
+def generate(data_path, mode="train"):
+    images = []
+    if mode == "train" or mode == "val":
+        labels = []
+    for data in data_df.iterrows():
+        try:
+            im_path = os.path.join(data_path, data[1]["file_name"])
+            image = io.imread(im_path)
+
+            # preprocess image
+            image = preprocess(image, mode=mode)
+            image = image.transpose((2, 0, 1))
+
+            if mode == "train" or mode == "val":
+                labels.append(data[1]["flag"])
+
+            images.append(image)
+        except FileNotFoundError:
+            print(f"ファイル '{data[1]['file_name']}' が見つかりません")
+
+    images = np.array(images)
+    if mode == "train" or mode == "val":
+        labels = np.array(labels)
+
+        return images, labels
+    else:
+        return images
+
+
+# %%
+images, labels = generate(data_path, mode="train")
+# train_images, train_labelsに後で変更しておく
+
+# %%
+print(len(images))
+print(len(labels))
+
+# %%
+# データを学習用と検証用に分ける関数
+# def split_data(data, ratio=0.95):
+#     train_index = np.random.choice(data.index, int(len(data)*ratio), replace=False)
+#     val_index = list(set(data.index).difference(set(train_index)))
+#     train = data.iloc[train_index].copy()
+#     val = data.iloc[val_index].copy()
+
+#     return train, val
+
+# %%
+# 4. データのシャッフルと分割
+x_tr, x_va, y_tr, y_va = train_test_split(
+    images, labels, test_size=0.1, random_state=123
+)
+
+
+# %%
+# 今回の評価関数となっているIOU(intersection over union)を実装します。正解データy_trueと予測されたデータy_predを渡してIOUを返します。
+def IOU(y_true, y_pred):
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    p_true_index = np.where(y_true == 1)[0]
+    p_pred_index = np.where(y_pred == 1)[0]
+    union = set(p_true_index).union(set(p_pred_index))
+    intersection = set(p_true_index).intersection(set(p_pred_index))
+    if len(union) == 0:
+        return 0
+    else:
+        return len(intersection) / len(union)
+
+
+# %%
+class MeanIoU(tf.keras.metrics.Metric):
+    def __init__(self, name="mean_iou", **kwargs):
+        super(MeanIoU, self).__init__(name=name, **kwargs)
+        self.intersection = self.add_weight(name="intersection", initializer="zeros")
+        self.union = self.add_weight(name="union", initializer="zeros")
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        y_true = tf.cast(y_true, tf.bool)
+        y_pred = tf.cast(y_pred > 0.5, tf.bool)
+
+        intersection = tf.reduce_sum(
+            tf.cast(tf.logical_and(y_true, y_pred), tf.float32)
+        )
+        union = tf.reduce_sum(tf.cast(tf.logical_or(y_true, y_pred), tf.float32))
+
+        self.intersection.assign_add(intersection)
+        self.union.assign_add(union)
+
+    def result(self):
+        return tf.math.divide_no_nan(self.intersection, self.union)
+
+    def reset_states(self):
+        self.intersection.assign(0)
+        self.union.assign(0)
+
+
+# %%
 # モデリング
 model = Sequential()
 
-model.add(Conv2D(32,(3,3),strides=2,activation="relu",input_shape=(32,32,7)))
-model.add(MaxPooling2D((2,2),strides=2))
+model.add(Conv2D(32, (3, 3), strides=2, activation="relu", input_shape=(32, 32, 7)))
+model.add(MaxPooling2D((2, 2), strides=2))
 model.add(Dropout(0.2))
-model.add(Conv2D(32,(3,3),strides=2,activation="relu"))
-model.add(MaxPooling2D((2,2),strides=2))
+model.add(Conv2D(32, (3, 3), strides=2, activation="relu"))
+model.add(MaxPooling2D((2, 2), strides=2))
 model.add(Dropout(0.2))
 model.add(Flatten())
 model.add(Dense(512, activation="relu"))
 model.add(Dropout(0.2))
 model.add(Dense(256, activation="relu"))
-model.add(Dense(2,activation="softmax"))
+model.add(Dense(2, activation="softmax"))
 model.summary()
-#%%
 
-
-tqdm.monitor_interval = 0
-#%%
-def preprocess(image, mode = 'train'):
-    """
-    image: shape = (h, w, channel)を想定。
-    mode: 'train', 'val', 'test'を想定。
-    """
-    if mode == 'train':
-        # その他いろいろな前処理メソッドを実装してみてください
-        if image.max()!=image.min():
-            image = exposure.rescale_intensity(image)
-
-    elif mode == 'val':
-        # その他いろいろな前処理メソッドを実装してみてください
-        if image.max()!=image.min():
-            image = exposure.rescale_intensity(image)
-
-    elif mode == 'test':
-        # その他いろいろな前処理メソッドを実装してみてください
-        if image.max()!=image.min():
-            image = exposure.rescale_intensity(image)
-    else:
-        # その他いろいろな前処理メソッドを実装してみてください
-        if image.max()!=image.min():
-            image = exposure.rescale_intensity(image)
-        
-    return image
-#%%
-def generate_minibatch(data_path, minibatch_meta, mode = 'train'):
-    images = []
-    if mode == 'train' or mode=='val':
-        labels = []
-    for data in minibatch_meta.iterrows():
-        im_path = os.path.join(data_path, data[1]['file_name'])
-        image = io.imread(im_path)
-
-        # preprocess image
-        image = preprocess(image, mode = mode)
-        image = image.transpose((2,0,1))
-        
-        if mode == 'train' or mode=='val':
-            labels.append(data[1]['flag'])
-
-        images.append(image)
-
-    images = np.array(images)
-    if mode == 'train' or mode=='val':
-        labels = np.array(labels)
-        
-        return images, labels
-    else:
-        return images
-    
-#%%
-def split_data(data, ratio=0.95):
-    train_index = np.random.choice(data.index, int(len(data)*ratio), replace=False)
-    val_index = list(set(data.index).difference(set(train_index)))
-    train = data.iloc[train_index].copy()
-    val = data.iloc[val_index].copy()
-
-    return train, val
-
-#%%
-def IOU(y_true, y_pred):
-    y_true = np.array(y_true)
-    y_pred = np.array(y_pred)
-    p_true_index = np.where(y_true==1)[0]
-    p_pred_index = np.where(y_pred==1)[0]
-    union = set(p_true_index).union(set(p_pred_index))
-    intersection = set(p_true_index).intersection(set(p_pred_index))
-    if len(union)==0:
-        return 0
-    else:
-        return len(intersection)/len(union)
-
-#%%
-
-
-
-#%%
-model.compile(optimizer="adam",
-              loss="softmax cross entropy",
-              metrics=["accuracy"])
-
-history = model.fit(x_train,y_train,epochs=20,
-                    validation_data=(x_test,y_test))
-test_loss,test_acc = model.evaluate(x_test,y_test)
-print(f"テストの正解率{test_acc:.2%}")
 
 # %%
-# 学習用画像が格納されているディレクトリを指定する
-data_path = "../input/Satellite/train_1/train"
+model.compile(optimizer="Adam", loss="softmax_cross_entropy", metrics=[MeanIoU()])
 
-# 学習用データを学習用と検証用に改めて分割する
-train, val = split_data(data, ratio = 0.95)
 
-print('-'*20, 'train', '-'*20)
-print('number of samples:', len(train))
-print('number of positives:', train['flag'].sum())
-print('nubmer of negatives:', (1- train['flag']).sum())
-print('-'*47)
+history = model.fit(
+    x_tr,
+    y_tr,
+    validation_data=(x_va, y_va),
+    epochs=20,
+    batch_size=64,
+    callbacks=[
+        ModelCheckpoint(
+            filepath="model_keras_embedding.weights.h5",
+            monitor="val_loss",
+            mode="min",
+            verbose=1,
+            save_best_only=True,
+            save_weights_only=True,
+        ),
+        EarlyStopping(
+            monitor="val_loss",
+            mode="min",
+            min_delta=0,
+            patience=10,
+            verbose=1,
+            restore_best_weights=True,
+        ),
+        ReduceLROnPlateau(
+            monitor="val_loss",
+            mode="min",
+            factor=0.1,
+            patience=5,
+            verbose=1,
+        ),
+    ],
+    verbose=1,
+)
 
-print('-'*20, 'val', '-'*20)
-print('number of samples:', len(val))
-print('number of positives:', val['flag'].sum())
-print('nubmer of negatives:', (1- val['flag']).sum())
-print('-'*45)
+test_loss, test_iou = model.evaluate(x_va, y_va)
+print(f"テストの正解率{test_iou:.2%}")
+
+
 # %%
+
+# %% モデル評価
+# y_va_pred = model.predict([x_num_va, x_cat_va], batch_size=8, verbose=1)
+# print(f"accuracy:{accuracy_score(y_va, np.where(y_va_pred > 0.5 ,1, 0)):4f}")
+
+#%%
+# %%
+# def seed_everything(seed):
+#     import random
+
+#     random.seed(seed)
+#     os.environ["PYTHONHASHSEED"] = str(seed)
+#     np.random.seed(seed)
+#     tf.random.set_seed(seed)
+#     session_conf = tf.compat.v1.ConfigProto(
+#         intra_op_parallelism_threads=1, inter_op_parallelism_threads=1
+#     )
+#     sess = tf.compat.v1.Session(
+#         graph=tf.compat.v1.get_default_graph(), config=session_conf
+#     )
+#     # tf.compat.v1.keras.backend.set_session(sess)
+#     # K.set_session(sess)
+
+# seed_everything(seed=123)
