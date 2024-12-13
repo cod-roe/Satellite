@@ -403,7 +403,8 @@ def preprocess(image, mode="train"):
 # %%
 tr1_data_path = "../input/Satellite/train_1/train"
 
-#%%
+
+# %%
 def generate(data_path, data_df, mode="train"):
     images = []
     if mode == "train" or mode == "val":
@@ -434,7 +435,7 @@ def generate(data_path, data_df, mode="train"):
 
 
 # %%
-images, labels = generate(tr1_data_path, data_df,mode="train")
+images, labels = generate(tr1_data_path, data_df, mode="train")
 # train_images, train_labelsに後で変更しておく
 
 # %%
@@ -454,7 +455,7 @@ print(len(labels))
 # %%
 # 4. データのシャッフルと分割
 
-#%%
+# %%
 x_tr, x_va, y_tr, y_va = train_test_split(
     images, labels, test_size=0.1, random_state=123
 )
@@ -463,7 +464,6 @@ x_tr, x_va, y_tr, y_va = train_test_split(
 datagen = ImageDataGenerator()
 train_generator = datagen.flow(x_tr, y_tr, batch_size=64)
 valid_generator = datagen.flow(x_va, y_va, batch_size=64)
-
 
 
 # %%
@@ -531,13 +531,14 @@ model.compile(optimizer="Adam", loss="binary_crossentropy", metrics=[MeanIoU()])
 
 
 history = model.fit(
-    x_tr,y_tr,# train_generator,
-    validation_data=(x_va,y_va),
+    x_tr,
+    y_tr,  # train_generator,
+    validation_data=(x_va, y_va),
     epochs=20,
     batch_size=64,
     callbacks=[
         ModelCheckpoint(
-            filepath= EXP_MODEL+"model_keras_cnn01.weights.h5",
+            filepath=EXP_MODEL + "/model_cnn01.weights.h5",
             monitor="val_loss",
             mode="min",
             verbose=1,
@@ -563,45 +564,45 @@ history = model.fit(
     verbose=1,
 )
 
-#%%
+# %%
 test_loss, test_iou = model.evaluate(x_va, y_va)
 print(f"IOU数値{test_iou:.2}")
 
 
 # %%
-param = [["IOU","mean_iou","val_mean_iou"],
- ["誤差","loss","val_loss"]]
+param = [["IOU", "mean_iou", "val_mean_iou"], ["誤差", "loss", "val_loss"]]
 
-plt.figure(figsize=(10,4))
+plt.figure(figsize=(10, 4))
 for i in range(2):
-    plt.subplot(1,2,i+1)
+    plt.subplot(1, 2, i + 1)
     plt.title(param[i][0])
-    plt.plot(history.history[param[i][1]],"o-")
-    plt.plot(history.history[param[i][2]],"o-")
+    plt.plot(history.history[param[i][1]], "o-")
+    plt.plot(history.history[param[i][2]], "o-")
     plt.xlabel("学習回数")
-    plt.legend(["訓練","テスト"],loc="best")
+    plt.legend(["訓練", "テスト"], loc="best")
 plt.show()
 
-#%%
+# %%
 # train2学習
 # =================================================
 
 tr2_data_path = "../input/Satellite/train_2/train"
 
-images_2, labels_2 = generate(tr2_data_path, data_df,mode="train")
+images_2, labels_2 = generate(tr2_data_path, data_df, mode="train")
 
 x_tr2, x_va2, y_tr2, y_va2 = train_test_split(
     images_2, labels_2, test_size=0.1, random_state=123
 )
 
 history = model.fit(
-    x_tr2,y_tr2,# train_generator,
-    validation_data=(x_va2,y_va2),
+    x_tr2,
+    y_tr2,  # train_generator,
+    validation_data=(x_va2, y_va2),
     epochs=20,
     batch_size=64,
     callbacks=[
         ModelCheckpoint(
-            filepath=EXP_MODEL+"/model_keras_cnn02.weights.h5",
+            filepath=EXP_MODEL + "/model_cnn02.weights.h5",
             monitor="val_loss",
             mode="min",
             verbose=1,
@@ -627,44 +628,44 @@ history = model.fit(
     verbose=1,
 )
 
-#%%
+# %%
 test_loss, test_iou = model.evaluate(x_va, y_va)
 print(f"IOU数値{test_iou:.2}")
 
 
 # %%
-param = [["IOU","mean_iou","val_mean_iou"],
- ["誤差","loss","val_loss"]]
+param = [["IOU", "mean_iou", "val_mean_iou"], ["誤差", "loss", "val_loss"]]
 
-plt.figure(figsize=(10,4))
+plt.figure(figsize=(10, 4))
 for i in range(2):
-    plt.subplot(1,2,i+1)
+    plt.subplot(1, 2, i + 1)
     plt.title(param[i][0])
-    plt.plot(history.history[param[i][1]],"o-")
-    plt.plot(history.history[param[i][2]],"o-")
+    plt.plot(history.history[param[i][1]], "o-")
+    plt.plot(history.history[param[i][2]], "o-")
     plt.xlabel("学習回数")
-    plt.legend(["訓練","テスト"],loc="best")
+    plt.legend(["訓練", "テスト"], loc="best")
 plt.show()
 
-#%%
+# %%
 # train3学習
 # =================================================
 
 tr3_data_path = "../input/Satellite/train_3/train"
 
-images_3, labels_3 = generate(tr3_data_path, data_df,mode="train")
+images_3, labels_3 = generate(tr3_data_path, data_df, mode="train")
 x_tr3, x_va3, y_tr3, y_va3 = train_test_split(
     images_3, labels_3, test_size=0.1, random_state=123
 )
 
 history = model.fit(
-    x_tr3,y_tr3,# train_generator,
-    validation_data=(x_va3,y_va3),
+    x_tr3,
+    y_tr3,  # train_generator,
+    validation_data=(x_va3, y_va3),
     epochs=20,
     batch_size=64,
     callbacks=[
         ModelCheckpoint(
-            filepath=EXP_MODEL+"/model_keras_cnn03.weights.h5",
+            filepath=EXP_MODEL + "/model_cnn03.weights.h5",
             monitor="val_loss",
             mode="min",
             verbose=1,
@@ -690,29 +691,26 @@ history = model.fit(
     verbose=1,
 )
 
-#%%
+# %%
 test_loss, test_iou = model.evaluate(x_va, y_va)
 print(f"IOU数値{test_iou:.2}")
 
 
 # %%
-param = [["IOU","mean_iou","val_mean_iou"],
- ["誤差","loss","val_loss"]]
+param = [["IOU", "mean_iou", "val_mean_iou"], ["誤差", "loss", "val_loss"]]
 
-plt.figure(figsize=(10,4))
+plt.figure(figsize=(10, 4))
 for i in range(2):
-    plt.subplot(1,2,i+1)
+    plt.subplot(1, 2, i + 1)
     plt.title(param[i][0])
-    plt.plot(history.history[param[i][1]],"o-")
-    plt.plot(history.history[param[i][2]],"o-")
+    plt.plot(history.history[param[i][1]], "o-")
+    plt.plot(history.history[param[i][2]], "o-")
     plt.xlabel("学習回数")
-    plt.legend(["訓練","テスト"],loc="best")
+    plt.legend(["訓練", "テスト"], loc="best")
 plt.show()
 
 
-
-
-#%%
+# %%
 # 推論処理
 # =================================================
 
@@ -722,125 +720,121 @@ plt.show()
 # 1-1.ファイル呼び込み
 test_path1 = "../input/Satellite/test_1/test"
 test1_sub = pd.DataFrame()
-test1_sub['file_name'] = os.listdir(test_path1)
+test1_sub["file_name"] = os.listdir(test_path1)
 test1_sub.head()
-#%%
+# %%
 # 1-2.前処理
 
-images_test1 = generate(test_path1,test1_sub, mode="test")
+images_test1 = generate(test_path1, test1_sub, mode="test")
 
 
-# %% 
+# %%
 # 1-3モデル評価
-y_va_pred1 = model.predict(images_test1,batch_size=64, verbose=1)
+y_va_pred1 = model.predict(images_test1, batch_size=64, verbose=1)
 
 test1_sub["pred"] = y_va_pred1
 test1_sub.head()
 
 
-#%%
+# %%
 # test2
 # =================================================
 # 2-1.ファイル呼び込み
 test_path2 = "../input/Satellite/test_2/test"
 test2_sub = pd.DataFrame()
-test2_sub['file_name'] = os.listdir(test_path2)
-#%%
+test2_sub["file_name"] = os.listdir(test_path2)
+# %%
 # 2-2.前処理
-images_test2 = generate(test_path2,test2_sub, mode="test")
+images_test2 = generate(test_path2, test2_sub, mode="test")
 
 
-# %% 
+# %%
 # 2-3.モデル評価
-y_va_pred2 = model.predict(images_test2,batch_size=64, verbose=1)
+y_va_pred2 = model.predict(images_test2, batch_size=64, verbose=1)
 
 test2_sub["pred"] = y_va_pred2
 test2_sub.head()
 
 
-#%%
+# %%
 # test3
 # =================================================
 # 3-1.ファイル呼び込み
 
 test_path3 = "../input/Satellite/test_3/test"
 test3_sub = pd.DataFrame()
-test3_sub['file_name'] = os.listdir(test_path3)
+test3_sub["file_name"] = os.listdir(test_path3)
 test3_sub.head()
-#%%
+# %%
 # 3-2.前処理
-images_test3 = generate(test_path3,test3_sub, mode="test")
+images_test3 = generate(test_path3, test3_sub, mode="test")
 
 
-# %% 
+# %%
 # 3-3モデル評価
-y_va_pred3 = model.predict(images_test3,batch_size=64, verbose=1)
+y_va_pred3 = model.predict(images_test3, batch_size=64, verbose=1)
 
 test3_sub["pred"] = y_va_pred3
 
 test3_sub.head()
 
 
-
-#%%
+# %%
 # test4
 # =================================================
 # 4-1.ファイル呼び込み
 
 test_path4 = "../input/Satellite/test_4/test"
 test4_sub = pd.DataFrame()
-test4_sub['file_name'] = os.listdir(test_path4)
+test4_sub["file_name"] = os.listdir(test_path4)
 test4_sub.head()
-#%%
+# %%
 # 4-2.前処理
-images_test4 = generate(test_path4,test4_sub, mode="test")
+images_test4 = generate(test_path4, test4_sub, mode="test")
 
 
-# %% 
+# %%
 # 4-3モデル評価
-y_va_pred4 = model.predict(images_test4,batch_size=64, verbose=1)
+y_va_pred4 = model.predict(images_test4, batch_size=64, verbose=1)
 
 test4_sub["pred"] = y_va_pred4
 
 test4_sub.head()
 
 
+# %%
 
-#%%
-
-df_submit = pd.concat([test1_sub, test2_sub,test3_sub],axis=0)
+df_submit = pd.concat([test1_sub, test2_sub, test3_sub, test4_sub], axis=0)
 
 df_submit.head()
-#%%
+# %%
 df_submit.shape
-#%%
+# %%
 df_submit.describe()
-#%%
-#サンプルの確認
+# %%
+# サンプルの確認
 sample_df = pd.read_csv(INPUT_PATH + "sample_submit.tsv", sep="\t")
 sample_df.shape
-#%%
+# %%
 df_submit["pred"] = (np.where(df_submit["pred"] >= 0.5, 1, 0)).astype(int)
 
-df_submit.sort_values('file_name', inplace=True)
+df_submit.sort_values("file_name", inplace=True)
 df_submit.head()
 
 
-df_submit.to_csv(os.path.join(OUTPUT_EXP, f"submission_{name}.tsv",index=False, header=False))
+df_submit.to_csv(
+    os.path.join(OUTPUT_EXP, f"submission_{name}.tsv", index=False, header=False)
+)
 
 
-#%%
-# テストさんまでのファイル
+# %%
+# テスト3までのファイル
 df_submit.to_csv(os.path.join(OUTPUT_EXP, f"submission_{name}.csv"))
 
-#%%
+# %%
 
 
-
-
-
-#%%
-
+# %%
 
 
 # %%
@@ -862,3 +856,153 @@ df_submit.to_csv(os.path.join(OUTPUT_EXP, f"submission_{name}.csv"))
 #     # K.set_session(sess)
 
 # seed_everything(seed=123)
+
+
+# %%
+# 8-61: 推論用関数
+def predict_tf(
+    input_x,
+    input_id,
+    list_nfold=[1, 2, 3],
+):
+    # 推論値を入れる変数の作成
+    test_pred = np.zeros((len(input_x), 4))
+
+    for nfold in list_nfold:
+        # modelのロード
+        filepath = os.path.join(EXP_MODEL, f"model_cnn{nfold}.weights.h5")
+        model = create_model(col_num=col_num, col_cat=col_cat, show=False)
+        model.load_weights(filepath)
+
+        # validの推論値取得
+        pred = model.predict([x_num_test, x_cat_test], batch_size=512, verbose=0)
+        test_pred += pred / len(list_nfold)
+
+    # 予測値の格納
+    df_test_pred = pd.concat(
+        [
+            input_id,
+            pd.DataFrame(
+                test_pred, columns=["target1", "target2", "target3", "target4"]
+            ),
+        ],
+        axis=1,
+    )
+
+    return df_test_pred
+
+
+# test4kopi
+# =================================================
+# 4-1.ファイル呼び込み
+
+test_path4 = "../input/Satellite/test_4/test"
+test4_sub = pd.DataFrame()
+test4_sub["file_name"] = os.listdir(test_path4)
+test4_sub.head()
+# %%
+# 4-2.前処理
+images_test4 = generate(test_path4, test4_sub, mode="test")
+
+
+# %%
+# 4-3モデル評価
+y_va_pred4 = model.predict(images_test4, batch_size=64, verbose=1)
+
+test4_sub["pred"] = y_va_pred4
+
+test4_sub.head()
+
+
+# %%
+
+df_submit = pd.concat([test1_sub, test2_sub, test3_sub, test4_sub], axis=0)
+
+df_submit.head()
+# %%
+df_submit.shape
+# %%
+df_submit.describe()
+# %%
+# サンプルの確認
+sample_df = pd.read_csv(INPUT_PATH + "sample_submit.tsv", sep="\t")
+sample_df.shape
+# %%
+df_submit["pred"] = (np.where(df_submit["pred"] >= 0.5, 1, 0)).astype(int)
+
+df_submit.sort_values("file_name", inplace=True)
+df_submit.head()
+
+
+df_submit.to_csv(
+    os.path.join(OUTPUT_EXP, f"submission_{name}.tsv", index=False, header=False)
+)
+
+
+# %%
+# テスト3までのファイル
+df_submit.to_csv(os.path.join(OUTPUT_EXP, f"submission_{name}.csv"))
+
+#%%
+# 8-55: ニューラルネットワークのモデル定義
+def create_model(
+    col_num=["heightInches", "weight"],
+    col_cat=["playerId", "teamId", "dayofweek"],
+    show=False,
+):
+    input_num = Input(shape=(len(col_num),))
+    input_cat = Input(shape=(len(col_cat),))
+
+    # numeric
+    x_num = input_num  # Dense(30,activation='relu)(input_num)
+    # category
+    for i, col in enumerate(col_cat):
+        tmp_cat = input_cat[:, i]
+        input_dim = dict_cat[col]["num_label"]
+        output_dim = int(input_dim / 2)
+        tmp_cat = Embedding(input_dim=input_dim, output_dim=output_dim)(tmp_cat)
+        tmp_cat = Dropout(0.2)(tmp_cat)
+        tmp_cat = Flatten()(tmp_cat)
+        if i == 0:
+            x_cat = tmp_cat
+        else:
+            x_cat = Concatenate()([x_cat, tmp_cat])
+
+    # concat
+    x = Concatenate()([x_num, x_cat])
+
+    x = Dense(128, activation="relu")(x)
+    x = BatchNormalization()(x)
+    x = Dropout(0.1)(x)
+    output = Dense(4, activation="linear")(x)
+
+    model = Model(inputs=[input_num, input_cat], outputs=output)
+    model.compile(optimizer="Adam", loss="mae", metrics=["mae"])
+
+    if show:
+        print(model.summary())
+    else:
+        return model
+
+
+# モデリング
+model = Sequential()
+
+model.add(Conv2D(32, (3, 3), strides=2, activation="relu", input_shape=(32, 32, 7)))
+model.add(MaxPooling2D((2, 2), strides=2))
+model.add(Dropout(0.2))
+model.add(Conv2D(32, (3, 3), strides=2, activation="relu"))
+model.add(MaxPooling2D((2, 2), strides=2))
+model.add(Dropout(0.2))
+model.add(Flatten())
+model.add(Dense(512, activation="relu"))
+model.add(Dropout(0.2))
+model.add(Dense(256, activation="relu"))
+model.add(Dense(1, activation="sigmoid"))
+model.summary()
+
+
+
+# %%
+# 8-56:モデル構造の確認
+create_model(col_num=col_num, col_cat=col_cat, show=True)
